@@ -1,0 +1,5 @@
+## Interface: 50400
+## Title: StaggerTracker
+## Notes: Shows text of current stagger
+## Author: Mortarez/Triama
+StaggerTracker.lua

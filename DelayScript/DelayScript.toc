@@ -1,0 +1,5 @@
+## Interface: 50400
+## Title: DelayScript
+## Notes: Run script after specified delay
+## Author: Mortarez/Triama
+DelayScript.lua

@@ -1,0 +1,5 @@
+## Interface: 40100
+## Title: AccidentalLeaver
+## Notes: Hides item "Leave party" of main dropdown menu.
+## Author: Mortarez/Triama
+AccidentalLeaver.lua

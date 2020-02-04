@@ -1,0 +1,5 @@
+## Interface: 50400
+## Title: CombatTimer
+## Notes: Shows the time since combat started
+## Author: Mortarez/Triama
+CombatTimer.lua
