@@ -1,0 +1,5 @@
+## Interface: 50400
+## Title: HealingReporter
+## Notes: Shows the numbers from logs with some processing (for healing)
+## Author: Mortarez/Triama
+HealingReporter.lua
