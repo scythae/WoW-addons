@@ -2,9 +2,9 @@
 
 local Settings = {}
 -- after changing settings use ingame chat command /reload
-Settings.Position = {300, 0}
-Settings.ReportInterval_Sec = 2
-Settings.VSpeed_PxPerSec = 60
+Settings.Position = {500, 0}
+Settings.ReportInterval_Sec = 3
+Settings.VSpeed_PxPerSec = 50
 Settings.TravelHeight = 200
 Settings.LineHeight = 32
 Settings.ColorRGB_EfficientHeal = {0.2, 1, 0.2}
@@ -29,16 +29,16 @@ local function HR_CreateNewLine()
 	Line:SetTextColor(unpack(Settings.ColorRGB_EfficientHeal))
 	Line:SetTextHeight(Settings.LineHeight)
 
+	local Icon = HR:CreateTexture(nil, "OVERLAY")
+	Icon:SetPoint("LEFT", Line, "RIGHT", 0, 0)
+	Icon:SetSize(Settings.LineHeight, Settings.LineHeight)
+	Line.Icon = Icon
+
 	local LinePart_Overheal = HR:CreateFontString(nil, "OVERLAY", Settings.FontStyle)
 	LinePart_Overheal:SetTextColor(unpack(Settings.ColorRGB_OverHeal))
 	LinePart_Overheal:SetTextHeight(Settings.LineHeight)
-	LinePart_Overheal:SetPoint("LEFT", Line, "RIGHT", 0, 0)
+	LinePart_Overheal:SetPoint("LEFT", Icon, "RIGHT", 0, 0)
 	Line.LinePart_Overheal = LinePart_Overheal
-
-	local Icon = HR:CreateTexture(nil, "OVERLAY")
-	Icon:SetPoint("LEFT", LinePart_Overheal, "RIGHT", 0, 0)
-	Icon:SetSize(Settings.LineHeight, Settings.LineHeight)
-	Line.Icon = Icon
 
 	return Line
 end
@@ -59,7 +59,7 @@ local function HR_GetFreshLine()
 			yOffset = PrevLineY + Settings.LineHeight
 		end
 	end		
-	Line:SetPoint("CENTER", 0, yOffset)
+	Line:SetPoint("RIGHT", 0, yOffset)
 	
 	table.insert(Lines, 1, Line)
 	return Line
@@ -77,18 +77,19 @@ local function HR_FormatNumber(Val)
 	return Val
 end
 
-local function HR_Report()
-	
+local function HR_Report()	
 	local SpellId, HealAmounts
 	for SpellId, HealAmounts in pairs(Report)
 	do
 		local Line = HR_GetFreshLine()
-		local EfficientHeal, Overheal = unpack(HealAmounts)
-		Line:SetText(HR_FormatNumber(EfficientHeal))
 		Line.Icon:SetTexture(GetSpellTexture(SpellId))
-	
+		
+		local EfficientHeal, Overheal = unpack(HealAmounts)
+		if EfficientHeal > 0 then
+			Line:SetText(HR_FormatNumber(EfficientHeal))
+		end	
 		if Overheal > 0 then
-			Line.LinePart_Overheal:SetText(" ("..HR_FormatNumber(Overheal)..")")
+			Line.LinePart_Overheal:SetText(HR_FormatNumber(Overheal))
 		end
 	end
 
@@ -202,5 +203,5 @@ local function RunTests()
 	print("passed: "..tostring(passed));
 end
 
---RunTests()
+RunTests()
 
