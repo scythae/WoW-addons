@@ -3,4 +3,3 @@
 ## Notes: Checks in which subzone you are and if you have desired talents for this subzone.
 ## Author: Mortarez/Triama
 RaiderBuildReminder.lua
-RaiderBuildReminder.lua

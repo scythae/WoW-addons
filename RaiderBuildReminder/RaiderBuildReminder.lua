@@ -3,21 +3,52 @@
 
 -- User's part:
 
-local Talents = {}
-Talents["The Summer Terrace"] = {2, 15}
-Talents["Chamber of the Paragons"] = {2, 15}
---[[
-Talents Ids:
-lvl15 | 01 02 03
-lvl30 | 04 05 06
-lvl45 | 07 08 09
-lvl60 | 10 11 12
-lvl75 | 13 14 15
-lvl90 | 16 17 18
-]]
+local Settings = {    
+    ["[HU] Warriors of Darkness"] = { 
 
+        ["Triama"] = {
+            ["Trade District"] = {
+                ["Talents"] = {"Chi Wave"}
+            },
+        },
+
+    },  
+
+    ["[EN] Evermoon"] = {
+
+        ["Triama"] = { 
+            ["The Summer Terrace"] = {
+                ["Talents"] = {"Tiger's Lust"}
+            },
+            ["Chamber of the Paragons"] = {
+                ["Talents"] = {"Ascendance"}
+            },             
+        },
+
+        ["Deviation"] = {
+            ["The Summer Terrace"] = {
+                ["Talents"] = {"Psyfiend", "Angelic Feather"}
+            },
+            ["Menagerie"] = {
+                ["Talents"] = {"Power Infusion", "Divine Star"}
+            },              
+        },
+
+    },  
+}
 
 -- Nerd's part:
+
+local BackupTemplate = {    
+    ["RealmName"] = {
+        ["CharacterName"] = {
+            ["SubzoneName"] = {
+                ["Talents"] = {"Crushing Blows", "Arcane Currents"},
+                ["Glyphs"] = {"Glyph of A", "Glyph of B"}
+            },
+        },
+    }, 
+}
 
 local MainFrame = CreateFrame("Frame", nil, UIParent)
 MainFrame:SetFrameStrata("BACKGROUND")
@@ -27,53 +58,74 @@ MainFrame:Show()
 
 local TextLine = MainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge3")
 TextLine:SetTextHeight(24)
-TextLine:SetText("RaiderBuildReminder")
 TextLine:SetPoint("CENTER", MainFrame, 0, 100)
 
 local InCombat = false
+local CharacterSettings
 
 local function GetCurrentTalents()
     local result = {}
-    for i = 1,6
+    for i = 1, 18
     do 
-        local a, TalentId = GetTalentRowSelectionInfo(i)
-        if TalentId then
-            table.insert(result, TalentId)
+        local TalentName, Texture, row, col, Active = GetTalentInfo(i)
+        if Active then
+            table.insert(result, TalentName)
         end
     end
 
     return result
 end
 
+local function InitCharacterSettings()
+    local r = GetRealmName()
+    if Settings[r] then 
+        local c = GetUnitName("player")        
+        CharacterSettings = Settings[r][c]   
+    end 
+end
+
 local function GetBuildMessage()
-    if InCombat then return "" end
+    if InCombat then return end
 
-    local CurrentTalents = GetCurrentTalents()
-    local SubZone = GetSubZoneText()
-    local WantedTalents = Talents[SubZone]
+    local SubZone = GetSubZoneText()  
+    local WantedSettings = CharacterSettings[SubZone]
+    if WantedSettings == nil then return end
 
+    local WantedTalents = WantedSettings["Talents"]
     if WantedTalents then
+        local CurrentTalents = GetCurrentTalents()
+        print(unpack(CurrentTalents))
         local i
         for i = 1, #WantedTalents
         do
-            local TalentId = WantedTalents[i]
-            if not tContains(CurrentTalents, TalentId) then 
-                return SubZone.."\nMissing talent: "..TalentId
+            local TalentName = WantedTalents[i]
+            if not tContains(CurrentTalents, TalentName) then 
+                return SubZone.."\nMissing talent: "..TalentName
             end
         end
     end
 
-    return ""
+    local Glyphs = WantedSettings["Glyphs"]
+
+    return
 end
 
-local function HR_OnEvent(Self, Event, ...)
+local function OnEvent(Self, Event, ...)
+    if Event == "PLAYER_ENTERING_WORLD" then 
+        InitCharacterSettings() 
+        if CharacterSettings == nil then
+            print("RaiderBuildReminder - cannot load settings")
+            return
+        end
+        MainFrame:RegisterEvent("ZONE_CHANGED_INDOORS")
+        MainFrame:RegisterEvent("PLAYER_TALENT_UPDATE")
+        MainFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
+        MainFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+    end
     if Event == "PLAYER_REGEN_DISABLED" then InCombat = true end
     if Event == "PLAYER_REGEN_ENABLED" then InCombat = false end
 
-    TextLine:SetText(GetBuildMessage())
+    TextLine:SetText(GetBuildMessage() or "")
 end
-MainFrame:SetScript("OnEvent", HR_OnEvent)
-MainFrame:RegisterEvent("ZONE_CHANGED_INDOORS")
-MainFrame:RegisterEvent("PLAYER_TALENT_UPDATE")
-MainFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
-MainFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+MainFrame:SetScript("OnEvent", OnEvent)
+MainFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
