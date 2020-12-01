@@ -3,3 +3,4 @@
 ## Notes: Shows the numbers from logs with some processing (for healing)
 ## Author: Mortarez/Triama
 HealingReporter.lua
+HealingReporterTests.lua
