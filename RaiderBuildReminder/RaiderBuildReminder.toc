@@ -4,3 +4,5 @@
 ## Author: Mortarez/Triama
 ## SavedVariablesPerCharacter: RaiderBuildReminderSettings
 RaiderBuildReminder.lua
+RaiderBuildReminderGUI.lua
+Utils.lua
