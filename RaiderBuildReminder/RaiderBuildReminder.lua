@@ -29,7 +29,6 @@ AT.SiegeOfOrgrimmarSubzones = {
 }
 
 local Core = {}
-local PlayerEnteredWorld = false
 local InCombat = false
 local Data
 
@@ -39,8 +38,8 @@ Core.Run = function()
     f:SetPoint("CENTER")
     f:SetSize(1, 1)
     f:SetScript("OnEvent", Core.OnEvent)
-    f:RegisterEvent("PLAYER_ENTERING_WORLD")    
-
+    f:RegisterEvent("PLAYER_ENTERING_WORLD")
+    
     local w = f:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge3")
     w:SetTextHeight(24)
     w:SetPoint("CENTER", f, 0, 100)
@@ -48,21 +47,34 @@ Core.Run = function()
 end
 
 Core.OnEvent = function(Self, Event, ...)
-    if Event == "PLAYER_ENTERING_WORLD" then
-        Core.OnLoad(Self)
-        PlayerEnteredWorld = true
+    if Event == "PLAYER_ENTERING_WORLD" then 
+        Core.StartLoadingTimer(Self)
     end
 
     if Event == "PLAYER_REGEN_DISABLED" then InCombat = true end
     if Event == "PLAYER_REGEN_ENABLED" then InCombat = false end
-    if Event == "ZONE_CHANGED" or Event == "ZONE_CHANGED_INDOORS" then 
-        Data.LastSubzone = GetSubZoneText()
-    end
     if Event == "PLAYER_SPECIALIZATION_CHANGED" then 
         AT.InitGUI()
     end
 
     Core.CheckBuild()
+end
+
+Core.StartLoadingTimer = function(Frame)
+    local TimeElapsed = 0
+
+    function OnUpdate(Self, Elapsed)
+        if TimeElapsed < 5 then
+            TimeElapsed = TimeElapsed + Elapsed;
+            return;
+        end;
+        Self:SetScript("OnUpdate", nil)
+        
+        Core.OnLoad(Self)
+        Core.CheckBuild()
+    end
+
+    Frame:SetScript("OnUpdate", OnUpdate)
 end
 
 Core.OnLoad = function(Frame)    
@@ -106,22 +118,18 @@ Core.InitData = function()
 end
 
 Core.CheckBuild = function()
-    if PlayerEnteredWorld then
-        Core.BuildWarning:SetText(Core.GetBuildMessage() or "")
-    end
+    Core.BuildWarning:SetText(Core.GetBuildMessage() or "")
 end
 
 Core.GetBuildMessage = function()
     if InCombat then return end
-    
     if Data == nil then return end
-    local Subzone = Data.LastSubzone or GetSubZoneText()
+    local Subzone = GetSubZoneText()
     
     local SubzoneSettings = Data[Subzone]
-    if SubzoneSettings == nil then return end
-    
-    local SpecId = GetActiveSpecGroup()
-    
+    if SubzoneSettings == nil then return end    
+    local SpecId = GetActiveSpecGroup()    
+
     local Talents = SubzoneSettings[SpecId]["Talents"]
     local i
     for i = 1, #Talents do
@@ -252,7 +260,6 @@ Core.SlashCommands["resetchar"] = function()
     RaiderBuildReminderSettings = nil
     AfterReset()
 end
-
 
 
 
