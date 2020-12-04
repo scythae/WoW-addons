@@ -6,6 +6,14 @@ AT.InitGUI = function()
     GUI.Init()
 end
 
+AT.ShowGUI = function()
+    GUI.Show()
+end
+
+AT.GetSelectedZone = function()
+    return GUI.SelectedSubzone
+end
+
 AT.SetCallbackOnGUIEvent = function(callback)
     GUI.OnEvent = callback
 end
@@ -18,24 +26,71 @@ end
 
 local GlyphMenus = {}
 local TalentCheckboxes = {}
+local SettingsFrame
 
-local SettingsFrame = CreateFrame("Frame", nil, UIParent)
-SettingsFrame.name = AddonName
-InterfaceOptions_AddCategory(SettingsFrame)
-
-GUI.AdjustableSubzone = AT.SiegeOfOrgrimmarSubzones[1][1]
+GUI.SelectedSubzone = AT.SiegeOfOrgrimmarSubzones[1][1]
 
 GUI.Init = function()
     if GUI.Created ~= true then
+        GUI.CreateSettingsFrame()
         GUI.InitTalentSettings()
         GUI.InitGlyphSettings()
         GUI.InitSubzonesMenu()
-        GUI.InitResetButtons()
 
         GUI.Created = true
     end
 
     GUI.LoadSettings()
+end
+
+GUI.CreateSettingsFrame = function()
+    local f = CreateFrame("Frame", AddonName.."SettingsFrame2", UIParent)
+    SettingsFrame = f    
+
+    f:SetFrameStrata("DIALOG")
+    f:SetPoint("TOPRIGHT", -150, -150)
+    f:SetSize(400, 300)
+    f:Hide()
+
+    tinsert(UISpecialFrames, f:GetName()) -- makes it to close when Esc is hit
+
+    f:SetClampedToScreen()
+    f:SetMovable(true)
+    f:EnableMouse(true)
+    f:RegisterForDrag("LeftButton")
+    f:SetScript("OnDragStart", f.StartMoving)
+    f:SetScript("OnDragStop", f.StopMovingOrSizing)
+    
+    f:SetBackdrop({
+        bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+        edgeSize = 16,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 },
+    })
+    f:SetBackdropColor(0.5, 0.5, 0, 0.5)
+
+    local function CreateButton(text)
+        local b = CreateFrame("Button", nil, f, "UIPanelButtonTemplate");
+        b:SetSize(20, 20)
+        b:SetText(text)
+        return b
+    end
+
+    local CloseButton = CreateButton("X")
+    CloseButton:SetPoint("TOPRIGHT", -5, -5)
+    CloseButton:HookScript("OnClick", function(self, ...)
+        HideUIPanel(self:GetParent())
+    end)   
+
+    local InfoButton = CreateButton("?")
+    InfoButton:SetPoint("RIGHT", CloseButton, "LEFT" , -5, 0)
+    InfoButton:HookScript("OnClick", function(self, ...)
+        GUI.DoOnEvent("SHOW_INFO")
+    end)    
+end
+
+GUI.Show = function()
+    ShowUIPanel(SettingsFrame)
 end
 
 GUI.InitTalentSettings = function()
@@ -92,7 +147,7 @@ end
 
 GUI.InitGlyphSettings = function()
     local Anchor = GUI.CreateTextLine(" ")
-    Anchor:SetPoint("TOPLEFT", 130, -21)
+    Anchor:SetPoint("TOPRIGHT", -250, -21)
 
     local Line = GUI.CreateTextLine("Glyphs")
     Line:SetPoint("TOPLEFT", Anchor, "TOPRIGHT", 30, 6)
@@ -115,8 +170,10 @@ GUI.CreateGlyphMenus = function(Anchor)
         end
     end   
 
+    local GlyphTypes = {1, 1, 1, 2, 2, 2}
     for i = 1, 6 do
-        local GlyphMenu = GUI.CreateGlyphMenu(Glyphs[ceil(i / 3)], i)
+        local GlyphType = GlyphTypes[i]
+        local GlyphMenu = GUI.CreateGlyphMenu(Glyphs[GlyphType], i)
         GlyphMenu:SetPoint("TOPLEFT", Anchor, "BOTTOMLEFT", 0, 0)
         Anchor = GlyphMenu
 
@@ -140,15 +197,12 @@ GUI.CreateGlyphMenu = function (Glyphs, MenuIndex)
     UIDropDownMenu_Initialize(Menu, function(self, level, menuList)
         local info = UIDropDownMenu_CreateInfo()    
         info.arg1 = self
-        info.func = function(self, arg1, arg2)
-            arg1:SetGlyph(arg2)
-            GUI.SaveGlyphMenus()                
-        end
+        info.func = GUI.ClyphMenuOnChange
 
         AT.utils.foreach_(Glyphs, function(glyph)
             info.arg2 = glyph
             info.text = glyph.Name
-            info.checked = glyph.Id == Menu:GetGlyph().Id
+            info.checked = glyph.Id == self:GetGlyph().Id
             UIDropDownMenu_AddButton(info)
         end)
     end) 
@@ -156,12 +210,18 @@ GUI.CreateGlyphMenu = function (Glyphs, MenuIndex)
     return Menu
 end
 
+GUI.ClyphMenuOnChange = function(self, arg1, arg2)
+    local Menu, Subzone = arg1, arg2
+    Menu:SetGlyph(Subzone)
+    GUI.SaveGlyphMenus()                
+end
+
 GUI.GetData = function(DataType)
-    return GUI.DoOnEvent("GET_DATA", GUI.AdjustableSubzone, DataType)
+    return GUI.DoOnEvent("GET_DATA", GUI.SelectedSubzone, DataType)
 end
 
 GUI.SetData = function(DataType, Content)    
-    GUI.DoOnEvent("SET_DATA", GUI.AdjustableSubzone, DataType, Content)
+    GUI.DoOnEvent("SET_DATA", GUI.SelectedSubzone, DataType, Content)
 end
 
 GUI.SaveTalentCheckboxes = function()
@@ -213,7 +273,7 @@ GUI.InitSubzonesMenu = function()
     local Menu = CreateFrame("Frame", AddonName.."SubzonesMenu", SettingsFrame, "UIDropDownMenuTemplate")
     
     Menu:SetPoint("TOPLEFT", TalentCheckboxes[16], "BOTTOMLEFT", 0, -20)
-    UIDropDownMenu_SetText(Menu, GUI.AdjustableSubzone)
+    UIDropDownMenu_SetText(Menu, GUI.SelectedSubzone)
     UIDropDownMenu_SetWidth(Menu, 200)
     
     UIDropDownMenu_Initialize(Menu, function(self, level, menuList)
@@ -224,7 +284,7 @@ GUI.InitSubzonesMenu = function()
         AT.utils.foreach_(AT.SiegeOfOrgrimmarSubzones, function(subzone)
             info.arg2 = subzone[1]
             info.text = subzone[1].." ("..subzone[2]..")"
-            info.checked = info.arg1 == GUI.AdjustableSubzone
+            info.checked = info.arg2 == GUI.SelectedSubzone
             UIDropDownMenu_AddButton(info)
         end)
     end)
@@ -233,33 +293,15 @@ GUI.InitSubzonesMenu = function()
 end
 
 GUI.SubzoneMenuOnChange = function(self, arg1, arg2)
-    GUI.AdjustableSubzone = arg2
-    UIDropDownMenu_SetText(arg1, arg2)
+    local Menu, Subzone = arg1, arg2
+    GUI.SelectedSubzone = Subzone
+    UIDropDownMenu_SetText(Menu, Subzone)
     GUI.LoadSettings()
 end
 
-GUI.InitResetButtons = function()
-    local ResetThisSubzone = CreateFrame("Button", nil, SettingsFrame, "UIPanelButtonTemplate ")
-    ResetThisSubzone:SetText("Reset for this subzone")
-    local w, h = ResetThisSubzone:GetSize()
-    ResetThisSubzone:SetSize(150, h)
-    ResetThisSubzone:SetPoint("TOPRIGHT", SettingsFrame, "TOPRIGHT", -20, -150)
-    ResetThisSubzone:HookScript("OnClick", function(...)
-        GUI.DoOnEvent("RESET_ZONE", GUI.AdjustableSubzone)
-    end)
-    
-    local ResetAllSubzones = CreateFrame("Button", nil, SettingsFrame, "UIPanelButtonTemplate ")
-    ResetAllSubzones:SetText("Reset for ALL subzones")
-    ResetAllSubzones:SetSize(150, h)
-    ResetAllSubzones:SetPoint("TOPRIGHT", SettingsFrame, "TOPRIGHT", -20, -35)    
-    ResetAllSubzones:HookScript("OnClick", function(...)
-        GUI.DoOnEvent("RESET_ALL_ZONES")
-    end)
-end    
-
 GUI.CreateTextLine = function(Text)
-    local Result = SettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge3")
+    local Result = SettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalMed3")
     Result:SetText(Text)
-    Result:SetTextHeight(12)
+    Result:SetTextHeight(14)
     return Result
 end
