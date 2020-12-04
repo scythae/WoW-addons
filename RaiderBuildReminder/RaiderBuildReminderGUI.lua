@@ -1,9 +1,20 @@
--- mop-veins.tk, 2020-12-01
 local AddonName, AddonTable = ...
 local AT = AddonTable
-local Data = AT.Data
 local GUI = {}
-AT.GUI = GUI
+
+AT.InitGUI = function()
+    GUI.Init()
+end
+
+AT.SetCallbackOnGUIEvent = function(callback)
+    GUI.OnEvent = callback
+end
+
+GUI.DoOnEvent = function(Event, ...)
+    if type(GUI.OnEvent) == "function" then
+        return GUI.OnEvent(Event, ...)
+    end
+end
 
 local GlyphMenus = {}
 local TalentCheckboxes = {}
@@ -15,10 +26,14 @@ InterfaceOptions_AddCategory(SettingsFrame)
 GUI.AdjustableSubzone = AT.SiegeOfOrgrimmarSubzones[1][1]
 
 GUI.Init = function()
-    GUI.InitTalentSettings()
-    GUI.InitGlyphSettings()
-    GUI.InitSubzonesMenu()
-    GUI.InitResetButtons()
+    if GUI.Created ~= true then
+        GUI.InitTalentSettings()
+        GUI.InitGlyphSettings()
+        GUI.InitSubzonesMenu()
+        GUI.InitResetButtons()
+
+        GUI.Created = true
+    end
 
     GUI.LoadSettings()
 end
@@ -141,9 +156,12 @@ GUI.CreateGlyphMenu = function (Glyphs, MenuIndex)
     return Menu
 end
 
-GUI.GetSubzoneData = function()
-    local SpecId = GetActiveSpecGroup()
-    return AT.Data[GUI.AdjustableSubzone][SpecId]
+GUI.GetData = function(DataType)
+    return GUI.DoOnEvent("GET_DATA", GUI.AdjustableSubzone, DataType)
+end
+
+GUI.SetData = function(DataType, Content)    
+    GUI.DoOnEvent("SET_DATA", GUI.AdjustableSubzone, DataType, Content)
 end
 
 GUI.SaveTalentCheckboxes = function()
@@ -154,12 +172,11 @@ GUI.SaveTalentCheckboxes = function()
         Talents[i] = TalentCheckboxes[i]:GetChecked() == 1
     end  
 
-    GUI.GetSubzoneData()["Talents"] = Talents
-    AT.Core.CheckBuild()
+    GUI.SetData("Talents", Talents)
 end
 
 GUI.LoadTalentCheckboxes = function()
-    local Talents = GUI.GetSubzoneData()["Talents"]
+    local Talents = GUI.GetData("Talents")
     
     local i
     for i = 1, #TalentCheckboxes do
@@ -175,12 +192,11 @@ GUI.SaveGlyphMenus = function()
         Glyphs[i] = GlyphMenus[i]:GetGlyph()
     end
     
-    GUI.GetSubzoneData()["Glyphs"] = Glyphs
-    AT.Core.CheckBuild()
+    GUI.SetData("Glyphs", Glyphs)
 end
 
 GUI.LoadGlyphMenus = function()
-    local Glyphs = GUI.GetSubzoneData()["Glyphs"]
+    local Glyphs = GUI.GetData("Glyphs")
 
     local i
     for i = 1, #GlyphMenus do
@@ -223,31 +239,21 @@ GUI.SubzoneMenuOnChange = function(self, arg1, arg2)
 end
 
 GUI.InitResetButtons = function()
-    local ResetThis = CreateFrame("Button", nil, SettingsFrame, "UIPanelButtonTemplate ")
-    ResetThis:SetText("Reset for this subzone")
-    local w, h = ResetThis:GetSize()
-    ResetThis:SetSize(150, h)
-    ResetThis:SetPoint("TOPRIGHT", SettingsFrame, "TOPRIGHT", -20, -150)
-
-    local function Reload()
-        AT.Core.InitData()
-        AT.Core.CheckBuild()
-        GUI.LoadSettings()
-    end
-
-    ResetThis:HookScript("OnClick", function (...)
-        RaiderBuildReminderSettings[GUI.AdjustableSubzone] = nil
-        Reload()
+    local ResetThisSubzone = CreateFrame("Button", nil, SettingsFrame, "UIPanelButtonTemplate ")
+    ResetThisSubzone:SetText("Reset for this subzone")
+    local w, h = ResetThisSubzone:GetSize()
+    ResetThisSubzone:SetSize(150, h)
+    ResetThisSubzone:SetPoint("TOPRIGHT", SettingsFrame, "TOPRIGHT", -20, -150)
+    ResetThisSubzone:HookScript("OnClick", function(...)
+        GUI.DoOnEvent("RESET_ZONE", GUI.AdjustableSubzone)
     end)
     
-    local ResetAll = CreateFrame("Button", nil, SettingsFrame, "UIPanelButtonTemplate ")
-    ResetAll:SetText("Reset for ALL subzones")
-    ResetAll:SetSize(150, h)
-    ResetAll:SetPoint("TOPRIGHT", SettingsFrame, "TOPRIGHT", -20, -35)
-    
-    ResetAll:HookScript("OnClick", function (...)
-        RaiderBuildReminderSettings = nil
-        Reload()
+    local ResetAllSubzones = CreateFrame("Button", nil, SettingsFrame, "UIPanelButtonTemplate ")
+    ResetAllSubzones:SetText("Reset for ALL subzones")
+    ResetAllSubzones:SetSize(150, h)
+    ResetAllSubzones:SetPoint("TOPRIGHT", SettingsFrame, "TOPRIGHT", -20, -35)    
+    ResetAllSubzones:HookScript("OnClick", function(...)
+        GUI.DoOnEvent("RESET_ALL_ZONES")
     end)
 end    
 

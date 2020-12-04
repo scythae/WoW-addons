@@ -1,10 +1,9 @@
 -- mop-veins.tk, 2020-12-01
 local AddonName, AddonTable = ...
 local AT = AddonTable
-local SlashCommand = "/rbr"
--- local Core = {}
--- AT.Core = Core
-
+local SlashCommand = "/rbr" 
+-- for opening settings use "/rbr" command
+-- for hard reset use "/rbr reset" with subsequent "/reload"
 
 AT.SiegeOfOrgrimmarSubzones = {
     {"The Summer Terrace", "Test"},
@@ -42,6 +41,8 @@ local SessionData = {
     Subzone = "NoData"
 }
 
+local GUIEventHandlers = {}
+
 local function GetCurrentGlyphs()
     local result = {}
     for i = 1, 6
@@ -55,6 +56,13 @@ local function GetCurrentGlyphs()
     return result
 end
 
+local function GetEmptyDataChunk()
+    return {
+        ["Talents"] = {},
+        ["Glyphs"] = {}
+    }
+end
+
 local function InitData()
     if RaiderBuildReminderSettings == nil then
         RaiderBuildReminderSettings = {}
@@ -66,16 +74,7 @@ local function InitData()
         local SubzoneName = subzone[1]
 
         if Data[SubzoneName] == nil then
-            Data[SubzoneName] = {
-                {
-                    ["Talents"] = {},
-                    ["Glyphs"] = {}
-                },
-                {
-                    ["Talents"] = {},
-                    ["Glyphs"] = {}
-                }
-            }
+            Data[SubzoneName] = { GetEmptyDataChunk(), GetEmptyDataChunk() }
         end 
     end)
 end
@@ -115,16 +114,36 @@ local function GetBuildMessage()
     return
 end
 
+local function CheckBuild()
+    if PlayerEnteredWorld then
+        BuildWarning:SetText(GetBuildMessage() or "")
+    end
+end
+
+local function AfterLoad()
+    InitData() 
+
+    AT.SetCallbackOnGUIEvent(function(Event, ...)
+        if GUIEventHandlers[Event] then
+            return GUIEventHandlers[Event](...)
+        end
+    end)
+    AT.InitGUI()   
+end
+
 local function OnLoad()    
     _G["SLASH_"..AddonName.."1"] = SlashCommand
     SlashCmdList[AddonName] = function(msg)
+        if strlower(msg) == "reset" then
+            RaiderBuildReminderSettings = nil
+            AfterLoad()
+            return    
+        end
+
         InterfaceOptionsFrame_Show()
         InterfaceOptionsFrame_OpenToCategory(AddonName)
     end
-    print(AddonName.." - "..SlashCommand)    
-    
-    InitData() 
-    AT.GUI.Init()
+    print(AddonName.." - "..SlashCommand)
 
     MainFrame:RegisterEvent("ZONE_CHANGED")
     MainFrame:RegisterEvent("ZONE_CHANGED_INDOORS")
@@ -134,12 +153,8 @@ local function OnLoad()
     MainFrame:RegisterEvent("GLYPH_ADDED")
     MainFrame:RegisterEvent("GLYPH_REMOVED")
     MainFrame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
-end
 
-local function CheckBuild()
-    if PlayerEnteredWorld then
-        BuildWarning:SetText(GetBuildMessage() or "")
-    end
+    AfterLoad()
 end
 
 local function OnEvent(Self, Event, ...)
@@ -153,17 +168,58 @@ local function OnEvent(Self, Event, ...)
     if Event == "ZONE_CHANGED" or Event == "ZONE_CHANGED_INDOORS" then 
         Data.LastSubzone = GetSubZoneText()
     end
+    if Event == "PLAYER_SPECIALIZATION_CHANGED" then 
+        AT.InitGUI()
+    end
 
     CheckBuild()
 end
 MainFrame:SetScript("OnEvent", OnEvent)
 MainFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 
-AT.Core = {}
-AT.Core.InitData = function()
-    InitData() 
+
+local function AfterReset()    
+    InitData()
+    CheckBuild()
+    AT.InitGUI()
 end
 
-AT.Core.CheckBuild = function()    
-    CheckBuild()    
+GUIEventHandlers["RESET_ZONE"] = function(ZoneName)
+    local SpecId = GetActiveSpecGroup()    
+    Data[ZoneName][SpecId] = GetEmptyDataChunk()
+    AfterReset()  
+end
+
+GUIEventHandlers["RESET_ALL_ZONES"] = function()
+    local SpecId = GetActiveSpecGroup()
+    local key, val
+    for key, val in pairs(Data) do
+        val[SpecId] = GetEmptyDataChunk()
+    end   
+    AfterReset()  
+end
+
+local function GetZoneDataChunk(ZoneName)
+    if Data[ZoneName] == nil then
+        Data[ZoneName] = { GetEmptyDataChunk(), GetEmptyDataChunk() }
+    end
+
+    return Data[ZoneName]
+end
+
+GUIEventHandlers["GET_DATA"] = function(ZoneName, DataType)
+    if DataType ~= "Talents" and DataType ~= "Glyphs" then return end
+
+    local SpecId = GetActiveSpecGroup()
+    
+    return GetZoneDataChunk(ZoneName)[SpecId][DataType]
+end
+
+GUIEventHandlers["SET_DATA"] = function(ZoneName, DataType, Content)
+    if DataType ~= "Talents" and DataType ~= "Glyphs" then return end
+
+    local SpecId = GetActiveSpecGroup()
+    GetZoneDataChunk(ZoneName)[SpecId][DataType] = Content
+
+    CheckBuild()
 end
