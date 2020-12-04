@@ -38,7 +38,7 @@ Core.Run = function()
     f:SetPoint("CENTER")
     f:SetSize(1, 1)
     f:SetScript("OnEvent", Core.OnEvent)
-    f:RegisterEvent("PLAYER_ENTERING_WORLD")
+    f:RegisterEvent("PLAYER_LOGIN")
     
     local w = f:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge3")
     w:SetTextHeight(24)
@@ -47,7 +47,7 @@ Core.Run = function()
 end
 
 Core.OnEvent = function(Self, Event, ...)
-    if Event == "PLAYER_ENTERING_WORLD" then 
+    if Event == "PLAYER_LOGIN" then 
         Core.StartLoadingTimer(Self)
     end
 
