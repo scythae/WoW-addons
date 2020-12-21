@@ -1,0 +1,6 @@
+﻿## Interface: 50400
+## Title: DBM-PullTimer
+## Notes: Pull timer from DBM-Core, the rest is cut
+## Author: Mortarez/Triama
+## Dependencies: Delay
+DBM-PullTimer.lua
