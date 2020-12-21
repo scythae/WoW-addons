@@ -2,4 +2,5 @@
 ## Title: DelayScript
 ## Notes: Run script after specified delay
 ## Author: Mortarez/Triama
+## Dependencies: Delay
 DelayScript.lua
