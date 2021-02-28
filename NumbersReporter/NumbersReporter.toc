@@ -1,0 +1,6 @@
+## Interface: 50400
+## Title: NumbersReporter
+## Notes: Shows the numbers from logs with some processing (for healing and dps)
+## Author: Mortarez/Triama
+NumbersReporter.lua
+NumbersReporterTests.lua
