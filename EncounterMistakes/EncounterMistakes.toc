@@ -1,0 +1,11 @@
+## Interface: 90005
+## Title: EncounterMistakes
+## Notes: Tracks for common mistakes during encounter and reports them after encounter finished
+## Author: Mortarez/Triama
+## SavedVariablesPerCharacter: EncounterMistakes
+EncounterMistakes.lua
+Encounters.lua
+EncounterMistakesGUI.lua
+Utils.lua
+Localization\En.lua
+Localization\Ru.lua

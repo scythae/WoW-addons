@@ -1,0 +1,3 @@
+local AddonName, AddonTable = ...
+local AT = AddonTable
+local GUI = {}
